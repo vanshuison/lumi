@@ -1,0 +1,9 @@
+{
+  "name": "Lumina AI: Intelligent Chat",
+  "description": "A sophisticated AI companion powered by Gemini, capable of advanced reasoning, image analysis, web search, and location-aware recommendations.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

@@ -1,0 +1,86 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumina AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fcfaf2; /* Warm Cream */
+            color: #2d3436;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .markdown-content h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: inherit; }
+        .markdown-content h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; color: inherit; }
+        .markdown-content h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: inherit; }
+        .markdown-content p { margin-bottom: 1rem; line-height: 1.6; }
+        .markdown-content b, .markdown-content strong { font-weight: 700; }
+        .markdown-content i, .markdown-content em { font-style: italic; opacity: 0.9; }
+        
+        .markdown-content ul, .markdown-content ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        .markdown-content ul { list-style-type: disc; }
+        .markdown-content ol { list-style-type: decimal; }
+        .markdown-content li { margin-bottom: 0.4rem; }
+
+        .markdown-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.9em; background: rgba(0,0,0,0.02); border-radius: 8px; overflow: hidden; }
+        .markdown-content th, .markdown-content td { padding: 0.75rem 1rem; border: 1px solid rgba(0,0,0,0.05); text-align: left; }
+        .markdown-content th { background: rgba(0,0,0,0.03); font-weight: 700; }
+
+        .markdown-content code { font-family: 'Fira Code', monospace; background: rgba(0,0,0,0.06); padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.85em; }
+        .markdown-content pre { background: #1e1e1e; color: #d4d4d4; padding: 1.25rem; border-radius: 12px; overflow-x: auto; margin-bottom: 1.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .markdown-content pre code { background: transparent; padding: 0; color: inherit; font-size: 0.85em; }
+        
+        .markdown-content blockquote { border-left: 4px solid #e4d8cc; padding-left: 1.25rem; color: #636e72; font-style: italic; margin-bottom: 1.5rem; background: rgba(0,0,0,0.01); padding-top: 0.5rem; padding-bottom: 0.5rem; border-radius: 0 8px 8px 0; }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e4d8cc;
+            border-radius: 10px;
+        }
+        
+        .landing-animate-in {
+            animation: slideUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.0.0",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "three": "https://esm.sh/three@0.170.0",
+    "@react-three/fiber": "https://esm.sh/@react-three/fiber@9.0.0-rc.0?external=react,react-dom,three",
+    "@react-three/drei": "https://esm.sh/@react-three/drei@9.121.3?external=react,react-dom,three,@react-three/fiber",
+    "@google/genai": "https://esm.sh/@google/genai@^1.38.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.7",
+    "marked": "https://esm.sh/marked@11.1.1",
+    "dompurify": "https://esm.sh/dompurify@3.0.8",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <div id="root"></div>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
