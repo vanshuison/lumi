@@ -10,9 +10,10 @@ interface MessageListProps {
   onSuggestedAction: (text: string) => void;
   onSpeak: (id: string, text: string) => void;
   onRegenerate?: (id: string) => void;
+  onInlineAction: (action: string, originalText: string) => void;
 }
 
-const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, onSuggestedAction, onSpeak, onRegenerate }) => {
+const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, onSuggestedAction, onSpeak, onRegenerate, onInlineAction }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -42,18 +43,18 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, onSuggest
           <i className="fa-solid fa-feather-pointed text-white text-3xl"></i>
         </div>
         <h2 className="text-4xl font-bold tracking-tight text-[#2d3436] mb-4">
-          Lumina <span className="font-light italic text-stone-400">Professional</span>
+          Lumina <span className="font-light italic text-stone-400">OS</span>
         </h2>
         <p className="max-w-md text-stone-500 text-base mb-12 leading-relaxed font-medium">
-          Integrated intelligence for advanced analysis and conceptual development. Select a starting protocol or input your inquiry.
+          Select a mode or upload a document to begin.
         </p>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
           {[
-            { icon: 'fa-chart-mixed', title: 'Strategic Analysis', text: 'Evaluate the current landscape of quantum computing' },
-            { icon: 'fa-microscope', title: 'Scientific Review', text: 'Summarize recent breakthroughs in CRISPR technology' },
-            { icon: 'fa-code-branch', title: 'Systems Design', text: 'Architect a scalable microservices infrastructure' },
-            { icon: 'fa-compass-drafting', title: 'Spatial Planning', text: 'Optimize transit routes for an urban environment' }
+            { icon: 'fa-rocket', title: 'Founder Mode', text: 'Analyze this startup idea for scalability' },
+            { icon: 'fa-code', title: 'Code Architect', text: 'Review this code for security vulnerabilities' },
+            { icon: 'fa-pen-nib', title: 'Editor Mode', text: 'Rewrite this email to be more persuasive' },
+            { icon: 'fa-file-pdf', title: 'Document Analysis', text: 'Summarize the key points of this PDF' }
           ].map((item, idx) => (
             <button 
               key={idx}
@@ -96,6 +97,22 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, onSuggest
                 </div>
                 
                 <div className={`flex flex-col max-w-[85%] ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
+                  {/* Attachments Display */}
+                  {message.attachments && message.attachments.length > 0 && (
+                     <div className="flex gap-2 mb-2 flex-wrap justify-end">
+                       {message.attachments.map((att, i) => (
+                         <div key={i} className="bg-white border border-stone-200 p-2 rounded-lg flex items-center gap-2 shadow-sm">
+                           {att.type === 'image' ? (
+                             <img src={`data:${att.mimeType};base64,${att.data}`} className="w-8 h-8 rounded object-cover" />
+                           ) : (
+                             <div className="w-8 h-8 bg-red-50 text-red-500 rounded flex items-center justify-center"><i className="fa-solid fa-file-pdf"></i></div>
+                           )}
+                           <span className="text-[10px] font-bold text-stone-600 truncate max-w-[80px]">{att.name || 'File'}</span>
+                         </div>
+                       ))}
+                     </div>
+                  )}
+
                   <div className={`
                     px-6 py-4 rounded-[2rem] text-[15px] leading-relaxed relative group/bubble
                     ${message.role === 'user' 
@@ -120,7 +137,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, onSuggest
                       </div>
                     ))}
                     
-                    <div className={`mt-4 flex items-center gap-3 border-t pt-3 transition-opacity ${message.role === 'user' ? 'border-white/10' : 'border-stone-100'}`}>
+                    <div className={`mt-4 flex flex-wrap items-center gap-3 border-t pt-3 transition-opacity ${message.role === 'user' ? 'border-white/10' : 'border-stone-100'}`}>
                       <button 
                         onClick={() => handleCopy(message.id, messageText)}
                         className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${copiedId === message.id ? 'bg-emerald-500 text-white' : (message.role === 'user' ? 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white' : 'bg-stone-50 text-stone-400 hover:text-[#2d3436] hover:bg-stone-100')}`}
@@ -134,23 +151,31 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, onSuggest
                           <button 
                             onClick={() => onRegenerate?.(message.id)}
                             className="w-8 h-8 rounded-full flex items-center justify-center bg-stone-50 text-stone-400 hover:text-[#2d3436] hover:bg-stone-100 transition-all"
-                            title="Regenerate response"
+                            title="Regenerate"
                           >
                             <i className="fa-solid fa-rotate-right text-[10px]"></i>
                           </button>
                           <button 
                             onClick={() => onSpeak(message.id, message.parts.find(p => p.text)?.text || '')}
                             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${message.isSpeaking ? 'bg-[#2d3436] text-white animate-pulse' : 'bg-stone-50 text-stone-400 hover:text-[#2d3436] hover:bg-stone-100'}`}
-                            title="Text to speech"
+                            title="Read Aloud"
                           >
                             <i className={`fa-solid ${message.isSpeaking ? 'fa-waveform-lines' : 'fa-volume-high'} text-[10px]`}></i>
                           </button>
-                          <div className="text-[9px] font-black uppercase tracking-widest text-stone-300">Protocol Services Avail.</div>
+                          
+                          {/* INLINE ACTIONS */}
+                          <div className="h-4 w-[1px] bg-stone-200 mx-1"></div>
+                          
+                          <button onClick={() => onInlineAction('shorten', messageText)} className="text-[10px] font-bold text-stone-400 hover:text-[#2d3436] px-2 py-1 hover:bg-stone-100 rounded-lg transition-colors">
+                            Shorten
+                          </button>
+                          <button onClick={() => onInlineAction('email', messageText)} className="text-[10px] font-bold text-stone-400 hover:text-[#2d3436] px-2 py-1 hover:bg-stone-100 rounded-lg transition-colors">
+                            To Email
+                          </button>
+                          <button onClick={() => onInlineAction('memory', messageText)} className="text-[10px] font-bold text-stone-400 hover:text-emerald-600 px-2 py-1 hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-1">
+                            <i className="fa-solid fa-memory"></i> Remember
+                          </button>
                         </>
-                      )}
-                      
-                      {message.role === 'user' && (
-                        <div className="text-[9px] font-black uppercase tracking-widest text-white/30">User Inquiry</div>
                       )}
                     </div>
                   </div>
