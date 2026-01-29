@@ -1,17 +1,29 @@
 
 import { GoogleGenAI, GenerateContentResponse, Modality } from "@google/genai";
-import { GroundingLink } from "../types";
+import { GroundingLink, Attachment, PersonaType } from "../types";
 
 /**
  * Lumina Intelligence Service
  * Optimized for Gemini 3 and 2.5 with advanced grounding protocols.
  */
+
+const PERSONA_PROMPTS: Record<PersonaType, string> = {
+  default: `You are Lumina, an elite AI intelligence agent. Mission: Provide responses that are "Concise yet Profound".`,
+  founder: `You are in FOUNDER MODE. Be direct, strategic, and result-oriented. Focus on ROI, leverage, and scalability. No fluff. Use bullet points.`,
+  coder: `You are a SENIOR PRINCIPAL ENGINEER. Focus on clean, efficient, scalable code. Always think about edge cases, security, and performance. Use modern patterns.`,
+  writer: `You are a WORLD-CLASS EDITOR. Focus on tone, rhythm, and clarity. Improve prose to be evocative and punchy.`,
+  analyst: `You are a DATA SCIENTIST. Be empirical. Ask for data sources. Structure answers in tables and logical steps. Focus on probabilities and outliers.`
+};
+
 export const generateIntelligentResponse = async (
   prompt: string,
   history: { role: string; parts: { text: string }[] }[],
-  image?: { data: string; mimeType: string },
+  attachments: Attachment[] = [],
   location?: { latitude: number; longitude: number },
-  modelName: string = 'gemini-3-flash-preview'
+  modelName: string = 'gemini-3-flash-preview',
+  persona: PersonaType = 'default',
+  memories: string[] = [],
+  deepThink: boolean = false
 ) => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
@@ -27,11 +39,13 @@ export const generateIntelligentResponse = async (
   }));
 
   const userParts: any[] = [{ text: prompt }];
-  if (image) {
+  
+  // Handle Attachments (Images & PDFs)
+  attachments.forEach(att => {
     userParts.push({
-      inlineData: { data: image.data, mimeType: image.mimeType }
+      inlineData: { data: att.data, mimeType: att.mimeType }
     });
-  }
+  });
 
   contents.push({ role: 'user', parts: userParts });
 
@@ -54,28 +68,24 @@ export const generateIntelligentResponse = async (
     };
   }
 
+  // Construct System Instruction with Memory Injection
+  let systemInstruction = PERSONA_PROMPTS[persona];
+  
+  if (memories.length > 0) {
+    systemInstruction += `\n\nCORE MEMORY (Use these facts to personalize the answer):\n${memories.map(m => `- ${m}`).join('\n')}`;
+  }
+
+  if (deepThink) {
+    systemInstruction += `\n\nPROTOCOL: DEEP THINKING. Before answering, explicitly list your reasoning steps. Analyze the problem from first principles.`;
+  }
+
+  systemInstruction += `\n\nFORMATTING: Use Markdown. Bold key terms.`;
+
   const config: any = {
-    systemInstruction: `You are Lumina, an elite AI intelligence agent with real-time web and spatial awareness.
-    MISSION: Provide responses that are "Concise yet Profound".
-    
-    RICH FORMATTING PROTOCOL:
-    - Always use Markdown to structure your data.
-    - BOLD key concepts and primary answers for immediate scanning.
-    - Use ITALICS for nuanced details or secondary insights.
-    - Use TABLES for comparative data or multi-column information.
-    - Use BULLETED or NUMBERED LISTS for steps, features, or recommendations.
-    - Use CODE BLOCKS (with language tags) for any technical data, code, or structured JSON.
-    - Use BLOCKQUOTES for citations or profound philosophical insights.
-    
-    CAPABILITIES:
-    - REAL-TIME DATA: Always leverage the googleSearch tool for recent news, trending topics, or general web inquiries.
-    - SPATIAL AWARENESS & RECOMMENDATIONS: When spatial grounding is active, prioritize providing highly specific, context-aware recommendations for restaurants, hotels, and local venues.
-    - INTELLIGENCE LAYER: For basic questions, give a direct answer then add one "Advanced Protocol" (a deep conceptual insight or future-looking prediction).
-    
-    TONE: Professional, executive, and slightly futuristic.`,
+    systemInstruction,
     tools,
     toolConfig,
-    thinkingConfig: (effectiveModel.includes('pro') || effectiveModel.includes('flash')) && !location ? { thinkingBudget: 16000 } : undefined
+    thinkingConfig: (effectiveModel.includes('pro') || effectiveModel.includes('flash')) && !location && !deepThink ? { thinkingBudget: 16000 } : undefined
   };
 
   try {
@@ -105,6 +115,33 @@ export const generateIntelligentResponse = async (
   } catch (error: any) {
     console.error("Gemini Critical Failure:", error);
     throw new Error(error.message || "Intelligence stream interrupted.");
+  }
+};
+
+/**
+ * Extracts potential memories from a user message.
+ * This runs in the background to build the user profile.
+ */
+export const extractMemories = async (text: string): Promise<string[]> => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) return [];
+  const ai = new GoogleGenAI({ apiKey });
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [{
+        role: 'user',
+        parts: [{ text: `Analyze this message and extract any permanent facts, preferences, or project details about the user. Return ONLY a JSON array of strings. If none, return []. Message: "${text}"` }]
+      }],
+      config: { responseMimeType: "application/json" }
+    });
+    
+    const jsonStr = response.text;
+    if (!jsonStr) return [];
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    return [];
   }
 };
 
