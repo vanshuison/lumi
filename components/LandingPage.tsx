@@ -80,7 +80,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, onSignup, o
         </div>
         <div className="hidden md:flex items-center gap-10">
           <a href="#about" className="text-xs font-black uppercase tracking-[0.2em] text-stone-500 hover:text-[#2d3436] transition-all">About</a>
-          <a href="#features" className="text-xs font-black uppercase tracking-[0.2em] text-stone-500 hover:text-[#2d3436] transition-all">Features</a>
+          <a href="#features" className="text-xs font-black uppercase tracking-[0.2em] text-stone-500 hover:text-[#2d3436] transition-all">Capabilities</a>
           <button 
             onClick={onLogin}
             className="text-xs font-black uppercase tracking-[0.2em] text-stone-500 hover:text-[#2d3436]"
@@ -160,7 +160,35 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, onSignup, o
         </main>
       </section>
 
-      {/* Sections 2, 3, 4 and Footer remain unchanged for design consistency */}
+      {/* Capabilities Section */}
+      <section id="features" className="py-24 px-8 md:px-24 bg-[#fcfaf2] relative z-20">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold text-[#2d3436] mb-6 tracking-tight">System Capabilities</h2>
+            <p className="text-xl text-stone-500 max-w-2xl mx-auto font-medium">Lumina OS is engineered for power users. Every feature is designed to reduce friction and amplify intelligence.</p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+             {[
+               { icon: 'fa-brain', title: 'Cortex Memory', desc: 'Persistent context. Lumina remembers your projects, preferences, and goals across sessions automatically.' },
+               { icon: 'fa-users-viewfinder', title: 'Adaptive Personas', desc: 'Shift gears instantly. Founder Mode for strategy, Coder for engineering, Analyst for data science.' },
+               { icon: 'fa-network-wired', title: 'Deep Reasoning', desc: 'Hybrid search engine combined with a high-budget internal thinking process for complex problem solving.' },
+               { icon: 'fa-layer-group', title: 'Multimodal Core', desc: 'Native PDF analysis, visual recognition, and voice dictation. Drag, drop, and discuss documents naturally.' },
+               { icon: 'fa-keyboard', title: 'Command Palette', desc: 'Keyboard-first navigation. Hit Cmd+K to switch modes, open memory, or start a new project.' },
+               { icon: 'fa-bolt', title: 'Inline Actions', desc: 'One-click workflows. Shorten, email, generate code, or save responses to memory directly from the stream.' }
+             ].map((feat, idx) => (
+               <div key={idx} className="bg-white p-8 rounded-[2rem] border border-stone-200 shadow-sm hover:shadow-xl hover:border-[#2d3436] hover:-translate-y-1 transition-all duration-300">
+                 <div className="w-12 h-12 rounded-2xl bg-[#fcfaf2] flex items-center justify-center text-[#2d3436] mb-6 text-xl">
+                   <i className={`fa-solid ${feat.icon}`}></i>
+                 </div>
+                 <h3 className="text-xl font-bold text-[#2d3436] mb-3">{feat.title}</h3>
+                 <p className="text-sm text-stone-500 leading-relaxed font-medium">{feat.desc}</p>
+               </div>
+             ))}
+          </div>
+        </div>
+      </section>
+
       <section id="about" className="py-32 px-8 md:px-24 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-2 gap-20 items-center">
@@ -192,19 +220,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, onSignup, o
         </div>
       </section>
 
-      <footer className="px-8 md:px-24 py-16 border-t border-stone-200/20 backdrop-blur-sm bg-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
+      <footer className="px-8 md:px-24 py-16 border-t border-stone-200/20 backdrop-blur-sm bg-white/5 flex flex-col md:flex-row justify-between items-center gap-8 bg-[#2d3436] text-white">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-2xl bg-[#2d3436] flex items-center justify-center shadow-lg">
-            <i className="fa-solid fa-feather text-white text-sm"></i>
+          <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-lg text-[#2d3436]">
+            <i className="fa-solid fa-feather text-sm"></i>
           </div>
           <span className="font-bold text-xl tracking-tight">Lumina</span>
         </div>
         <div className="flex gap-10 text-[10px] font-black uppercase tracking-[0.2em] text-stone-400">
-          <a href="#" className="hover:text-[#2d3436]">Privacy</a>
-          <a href="#" className="hover:text-[#2d3436]">Terms</a>
-          <a href="#" className="hover:text-[#2d3436]">Contact</a>
+          <a href="#" className="hover:text-white transition-colors">Privacy</a>
+          <a href="#" className="hover:text-white transition-colors">Terms</a>
+          <a href="#" className="hover:text-white transition-colors">Contact</a>
         </div>
-        <span className="text-[10px] font-black tracking-[0.2em] text-stone-300">© 2025 LUMINA AI PROTOCOL</span>
+        <span className="text-[10px] font-black tracking-[0.2em] text-stone-500">© 2025 LUMINA AI PROTOCOL</span>
       </footer>
 
       <style>{`
