@@ -1,10 +1,10 @@
 
 import { GoogleGenAI, GenerateContentResponse, Modality } from "@google/genai";
-import { GroundingLink, Attachment, PersonaType } from "../types";
+import { GroundingLink, Attachment, PersonaType, ImageSize } from "../types";
 
 /**
  * Lumina Intelligence Service
- * Optimized for Gemini 3 and 2.5 with advanced grounding protocols.
+ * Optimized for Gemini 3 and 2.5 with advanced grounding and generation protocols.
  */
 
 const PERSONA_PROMPTS: Record<PersonaType, string> = {
@@ -23,7 +23,8 @@ export const generateIntelligentResponse = async (
   modelName: string = 'gemini-3-flash-preview',
   persona: PersonaType = 'default',
   memories: string[] = [],
-  deepThink: boolean = false
+  deepThink: boolean = false,
+  imageGenerationConfig?: { enabled: boolean; size: ImageSize }
 ) => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
@@ -32,31 +33,31 @@ export const generateIntelligentResponse = async (
 
   const ai = new GoogleGenAI({ apiKey });
 
-  // Map roles to 'user' and 'model' as required by Gemini API
-  const contents: any = history.map(h => ({
-    role: h.role === 'assistant' ? 'model' : 'user',
-    parts: h.parts
-  }));
-
-  const userParts: any[] = [{ text: prompt }];
-  
-  // Handle Attachments (Images & PDFs)
-  attachments.forEach(att => {
-    userParts.push({
-      inlineData: { data: att.data, mimeType: att.mimeType }
-    });
-  });
-
-  contents.push({ role: 'user', parts: userParts });
-
-  // TOOL SELECTION & MODEL OVERRIDE
+  // --- MODEL SELECTION LOGIC ---
+  let effectiveModel = modelName;
+  let systemInstruction = PERSONA_PROMPTS[persona];
   let tools: any[] = [{ googleSearch: {} }];
   let toolConfig: any = undefined;
-  let effectiveModel = modelName;
+  let imageConfig: any = undefined;
 
-  // If location is provided, we MUST use Gemini 2.5 for Maps grounding support
-  if (location && location.latitude && location.longitude) {
-    effectiveModel = 'gemini-2.5-flash'; // Required for Google Maps grounding
+  // 1. IMAGE GENERATION (Nano Banana Pro)
+  if (imageGenerationConfig?.enabled) {
+    effectiveModel = 'gemini-3-pro-image-preview';
+    imageConfig = {
+      imageSize: imageGenerationConfig.size
+    };
+    // System instruction is less relevant for image gen but we keep a basic one
+    systemInstruction = "Generate high-quality images based on the user prompt.";
+  }
+  // 2. IMAGE EDITING / VISION (Nano Banana)
+  else if (attachments.some(a => a.type === 'image')) {
+    effectiveModel = 'gemini-2.5-flash-image';
+    // Remove tools that aren't supported or needed for simple image editing
+    tools = []; 
+  }
+  // 3. SPATIAL GROUNDING (Maps)
+  else if (location && location.latitude && location.longitude) {
+    effectiveModel = 'gemini-2.5-flash'; 
     tools = [{ googleSearch: {} }, { googleMaps: {} }];
     toolConfig = {
       retrievalConfig: {
@@ -67,25 +68,47 @@ export const generateIntelligentResponse = async (
       }
     };
   }
+  // 4. TEXT / DEFAULT
+  else {
+    // If fast/lite is requested via modelName, keep it. Otherwise standard logic.
+  }
 
-  // Construct System Instruction with Memory Injection
-  let systemInstruction = PERSONA_PROMPTS[persona];
+  // Map roles to 'user' and 'model'
+  const contents: any = history.map(h => ({
+    role: h.role === 'assistant' ? 'model' : 'user',
+    parts: h.parts
+  }));
+
+  const userParts: any[] = [{ text: prompt }];
   
-  if (memories.length > 0) {
-    systemInstruction += `\n\nCORE MEMORY (Use these facts to personalize the answer):\n${memories.map(m => `- ${m}`).join('\n')}`;
+  // Handle Attachments
+  attachments.forEach(att => {
+    userParts.push({
+      inlineData: { data: att.data, mimeType: att.mimeType }
+    });
+  });
+
+  contents.push({ role: 'user', parts: userParts });
+
+  // Construct Memory Context (Only for text models usually, but harmless to add)
+  if (memories.length > 0 && !imageGenerationConfig?.enabled) {
+    systemInstruction += `\n\nCORE MEMORY:\n${memories.map(m => `- ${m}`).join('\n')}`;
   }
 
-  if (deepThink) {
-    systemInstruction += `\n\nPROTOCOL: DEEP THINKING. Before answering, explicitly list your reasoning steps. Analyze the problem from first principles.`;
+  if (deepThink && !imageGenerationConfig?.enabled) {
+    systemInstruction += `\n\nPROTOCOL: DEEP THINKING. Explicitly list reasoning steps.`;
   }
 
-  systemInstruction += `\n\nFORMATTING: Use Markdown. Bold key terms.`;
+  if (!imageGenerationConfig?.enabled) {
+    systemInstruction += `\n\nFORMATTING: Use Markdown.`;
+  }
 
   const config: any = {
     systemInstruction,
-    tools,
-    toolConfig,
-    thinkingConfig: (effectiveModel.includes('pro') || effectiveModel.includes('flash')) && !location && !deepThink ? { thinkingBudget: 16000 } : undefined
+    tools: effectiveModel.includes('flash-lite') ? undefined : tools, // Lite doesn't support tools
+    toolConfig: effectiveModel.includes('flash-lite') ? undefined : toolConfig,
+    imageConfig,
+    thinkingConfig: (effectiveModel.includes('pro') || effectiveModel.includes('flash')) && !location && !deepThink && !imageGenerationConfig?.enabled && !effectiveModel.includes('image') && !effectiveModel.includes('lite') ? { thinkingBudget: 16000 } : undefined
   };
 
   try {
@@ -95,9 +118,27 @@ export const generateIntelligentResponse = async (
       config
     });
 
-    const text = response.text;
-    if (!text) throw new Error("Intelligence stream timed out or safety triggered.");
+    // Parse Response (Could be Text or Image)
+    let text = "";
+    let generatedImage: { mimeType: string, data: string } | undefined;
+
+    if (response.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.text) {
+          text += part.text;
+        }
+        if (part.inlineData) {
+          generatedImage = {
+            mimeType: part.inlineData.mimeType,
+            data: part.inlineData.data
+          };
+        }
+      }
+    }
+
+    if (!text && !generatedImage) throw new Error("Intelligence stream timed out or returned empty.");
     
+    // Extract Grounding
     const groundingLinks: GroundingLink[] = [];
     const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     
@@ -111,7 +152,7 @@ export const generateIntelligentResponse = async (
       });
     }
 
-    return { text, groundingLinks };
+    return { text, groundingLinks, generatedImage };
   } catch (error: any) {
     console.error("Gemini Critical Failure:", error);
     throw new Error(error.message || "Intelligence stream interrupted.");
@@ -120,7 +161,6 @@ export const generateIntelligentResponse = async (
 
 /**
  * Extracts potential memories from a user message.
- * This runs in the background to build the user profile.
  */
 export const extractMemories = async (text: string): Promise<string[]> => {
   const apiKey = process.env.API_KEY;
