@@ -1,9 +1,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Attachment } from '../types';
+import { Attachment, ImageSize } from '../types';
 
 interface InputAreaProps {
-  onSend: (text: string, attachments: Attachment[], deepThink: boolean) => void;
+  onSend: (text: string, attachments: Attachment[], deepThink: boolean, imageGenConfig?: { enabled: boolean; size: ImageSize }, isFast?: boolean) => void;
   isTyping: boolean;
   hasLocation?: boolean;
 }
@@ -12,7 +12,12 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isTyping, hasLocation }) 
   const [text, setText] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isListening, setIsListening] = useState(false);
+  
+  // Feature Toggles
   const [deepThink, setDeepThink] = useState(false);
+  const [isTurbo, setIsTurbo] = useState(false);
+  const [isImageGen, setIsImageGen] = useState(false);
+  const [imageSize, setImageSize] = useState<ImageSize>('1K');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -65,7 +70,7 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isTyping, hasLocation }) 
     if ((!text.trim() && attachments.length === 0) || isTyping) return;
     if (isListening) recognitionRef.current.stop();
     
-    onSend(text, attachments, deepThink);
+    onSend(text, attachments, deepThink, isImageGen ? { enabled: true, size: imageSize } : undefined, isTurbo);
     setText('');
     setAttachments([]);
     if (textAreaRef.current) textAreaRef.current.style.height = 'auto';
@@ -110,6 +115,34 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isTyping, hasLocation }) 
     setText(target.value);
   };
 
+  // Logic to prevent conflicting modes
+  const toggleImageGen = () => {
+    const newState = !isImageGen;
+    setIsImageGen(newState);
+    if (newState) {
+      setIsTurbo(false);
+      setDeepThink(false);
+    }
+  };
+
+  const toggleTurbo = () => {
+    const newState = !isTurbo;
+    setIsTurbo(newState);
+    if (newState) {
+      setIsImageGen(false);
+      setDeepThink(false);
+    }
+  };
+
+  const toggleDeepThink = () => {
+    const newState = !deepThink;
+    setDeepThink(newState);
+    if (newState) {
+      setIsTurbo(false);
+      setIsImageGen(false);
+    }
+  };
+
   return (
     <div className="px-6 pb-10 pt-4 bg-[#fcfaf2]/80 backdrop-blur-lg">
       <div className="max-w-4xl mx-auto">
@@ -142,7 +175,7 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isTyping, hasLocation }) 
         )}
 
         <div className="relative group">
-          <div className="flex items-end gap-1 bg-white border border-stone-200 rounded-[1.75rem] p-2 pr-3 shadow-sm transition-all focus-within:border-stone-400 focus-within:shadow-md">
+          <div className={`flex items-end gap-1 bg-white border rounded-[1.75rem] p-2 pr-3 shadow-sm transition-all focus-within:shadow-md ${isImageGen ? 'border-purple-300 ring-2 ring-purple-50' : 'border-stone-200 focus-within:border-stone-400'}`}>
             <button 
               onClick={() => fileInputRef.current?.click()}
               className="p-3.5 text-stone-400 hover:text-[#2d3436] hover:bg-stone-50 rounded-2xl transition-all flex-shrink-0"
@@ -174,7 +207,7 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isTyping, hasLocation }) 
               value={text}
               onChange={adjustHeight}
               onKeyDown={handleKeyDown}
-              placeholder={isListening ? "Listening..." : "Message or upload PDF..."}
+              placeholder={isListening ? "Listening..." : (isImageGen ? "Describe image to generate..." : "Message, edit image, or upload PDF...")}
               className="flex-1 bg-transparent border-none focus:ring-0 text-[#2d3436] placeholder:text-stone-300 font-medium py-3.5 resize-none text-[15px] custom-scrollbar"
             />
 
@@ -185,45 +218,61 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isTyping, hasLocation }) 
                 w-11 h-11 rounded-2xl transition-all flex items-center justify-center flex-shrink-0
                 ${(!text.trim() && attachments.length === 0) || isTyping 
                   ? 'bg-stone-50 text-stone-300 border border-stone-100' 
-                  : 'bg-[#2d3436] text-white shadow-lg hover:bg-black active:scale-95'}
+                  : isImageGen ? 'bg-purple-600 text-white shadow-lg hover:bg-purple-700' : 'bg-[#2d3436] text-white shadow-lg hover:bg-black active:scale-95'}
               `}
             >
               {isTyping ? (
                 <i className="fa-solid fa-circle-notch animate-spin text-sm"></i>
               ) : (
-                <i className="fa-solid fa-arrow-up-long text-sm"></i>
+                <i className={`fa-solid ${isImageGen ? 'fa-wand-magic-sparkles' : 'fa-arrow-up-long'} text-sm`}></i>
               )}
             </button>
           </div>
           
-          <div className="mt-3 flex items-center justify-between px-4">
-             <div className="flex gap-4 items-center">
+          <div className="mt-3 flex flex-wrap items-center justify-between px-4 gap-y-2">
+             <div className="flex gap-3 sm:gap-4 items-center">
                 <button 
-                  onClick={() => setDeepThink(!deepThink)}
+                  onClick={toggleDeepThink}
                   className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest transition-all ${deepThink ? 'text-indigo-600' : 'text-stone-300 hover:text-stone-400'}`}
                 >
                   <i className={`fa-solid fa-brain ${deepThink ? 'animate-pulse' : ''}`}></i>
-                  Deep Reasoning {deepThink ? 'ON' : 'OFF'}
+                  Reasoning {deepThink ? 'ON' : 'OFF'}
                 </button>
-                
+
                 <span className="w-1 h-1 rounded-full bg-stone-200"></span>
 
-                <span className="text-[9px] font-black text-stone-300 uppercase tracking-widest flex items-center gap-1.5">
-                  <i className="fa-solid fa-wifi text-[10px]"></i> Grounding
-                </span>
+                <button 
+                  onClick={toggleTurbo}
+                  className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest transition-all ${isTurbo ? 'text-amber-500' : 'text-stone-300 hover:text-stone-400'}`}
+                >
+                  <i className="fa-solid fa-bolt"></i>
+                  Turbo {isTurbo ? 'ON' : 'OFF'}
+                </button>
 
-                {hasLocation && (
-                  <>
-                    <span className="w-1 h-1 rounded-full bg-stone-200"></span>
-                    <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5 animate-in fade-in duration-500">
-                      <i className="fa-solid fa-location-crosshairs text-[10px]"></i> Spatial
-                    </span>
-                  </>
-                )}
+                <span className="w-1 h-1 rounded-full bg-stone-200"></span>
+
+                <button 
+                  onClick={toggleImageGen}
+                  className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest transition-all ${isImageGen ? 'text-purple-500' : 'text-stone-300 hover:text-stone-400'}`}
+                >
+                  <i className="fa-solid fa-image"></i>
+                  Img Gen {isImageGen ? 'ON' : 'OFF'}
+                </button>
              </div>
-             <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest opacity-60">
-               Lumina OS
-             </span>
+
+            {isImageGen && (
+              <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1 animate-in slide-in-from-left-2 fade-in">
+                {(['1K', '2K', '4K'] as ImageSize[]).map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => setImageSize(size)}
+                    className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest transition-all ${imageSize === size ? 'bg-white text-[#2d3436] shadow-sm' : 'text-stone-400 hover:text-[#2d3436]'}`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
