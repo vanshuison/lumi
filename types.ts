@@ -54,3 +54,5 @@ export interface Persona {
   systemInstruction: string;
   description: string;
 }
+
+export type ImageSize = '1K' | '2K' | '4K';
