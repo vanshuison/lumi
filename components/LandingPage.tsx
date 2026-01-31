@@ -1,8 +1,24 @@
-
 import React, { Suspense, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, MeshDistortMaterial, Sphere, PerspectiveCamera, Environment, Stars } from '@react-three/drei';
 import * as THREE from 'three';
+
+// Fix for missing R3F types in the current environment
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      mesh: any;
+      group: any;
+      ambientLight: any;
+      pointLight: any;
+      spotLight: any;
+      torusGeometry: any;
+      meshBasicMaterial: any;
+      boxGeometry: any;
+      meshStandardMaterial: any;
+    }
+  }
+}
 
 interface LandingPageProps {
   onStart: () => void;
