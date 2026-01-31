@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Message, ChatState, Memory, PersonaType, Attachment } from './types';
+import { Message, ChatState, Memory, PersonaType, Attachment, ImageSize } from './types';
 import { generateIntelligentResponse, generateSpeech, extractMemories } from './services/geminiService';
 import { supabase } from './services/supabaseClient';
 import MessageList from './components/MessageList';
@@ -57,7 +57,6 @@ const App: React.FC = () => {
       if (session) {
         setView('chat');
         loadHistory(session.user.id);
-        // Load memories from local storage for now (Simulating backend)
         const stored = localStorage.getItem('lumina_memories');
         if (stored) setMemories(JSON.parse(stored));
       }
@@ -89,7 +88,7 @@ const App: React.FC = () => {
           parts: m.parts,
           groundingLinks: m.grounding_links,
           timestamp: new Date(m.created_at).getTime(),
-          attachments: [] // Legacy compat
+          attachments: [] 
         }));
         setState(prev => ({ ...prev, messages: formattedMessages }));
       }
@@ -139,7 +138,13 @@ const App: React.FC = () => {
     } catch (err) { console.error("Delete failed:", err); }
   };
 
-  const handleSendMessage = async (text: string, attachments: Attachment[] = [], deepThink: boolean = false) => {
+  const handleSendMessage = async (
+    text: string, 
+    attachments: Attachment[] = [], 
+    deepThink: boolean = false, 
+    imageGenConfig?: { enabled: boolean; size: ImageSize },
+    isFast?: boolean
+  ) => {
     if (!text.trim() && attachments.length === 0) return;
     if (!session) { setView('login'); return; }
     if (view !== 'chat') setView('chat');
@@ -168,21 +173,48 @@ const App: React.FC = () => {
       }));
     }
 
-    // Auto-extract memory in background
-    extractMemories(text).then(extracted => {
-      extracted.forEach(fact => addMemory(fact, 'fact'));
-    });
+    if (!imageGenConfig?.enabled) {
+      extractMemories(text).then(extracted => {
+        extracted.forEach(fact => addMemory(fact, 'fact'));
+      });
+    }
 
     try {
       const history = state.messages.map(m => ({ role: m.role, parts: m.parts.map(p => ({ text: p.text || '' })) }));
       const memoryContext = memories.map(m => m.content);
       
-      const response = await generateIntelligentResponse(text, history, attachments, location, 'gemini-3-flash-preview', activePersona, memoryContext, deepThink);
+      // Determine Model
+      let model = 'gemini-3-flash-preview';
+      if (isFast) model = 'gemini-2.5-flash-lite'; // Fast Response
+      // Note: Image Editing (Flash Image) and Image Gen (Pro Image) are handled inside service logic based on config/attachments
+      
+      const response = await generateIntelligentResponse(
+        text, 
+        history, 
+        attachments, 
+        location, 
+        model, 
+        activePersona, 
+        memoryContext, 
+        deepThink,
+        imageGenConfig
+      );
+
+      const parts: any[] = [];
+      if (response.text) parts.push({ text: response.text });
+      if (response.generatedImage) {
+        parts.push({ 
+          inlineData: { 
+            mimeType: response.generatedImage.mimeType, 
+            data: response.generatedImage.data 
+          } 
+        });
+      }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        parts: [{ text: response.text }],
+        parts,
         groundingLinks: response.groundingLinks,
         timestamp: Date.now(),
       };
@@ -248,7 +280,6 @@ const App: React.FC = () => {
     return state.messages.filter(m => m.role === 'user' && (searchTerm ? m.parts.some(p => p.text?.toLowerCase().includes(searchTerm.toLowerCase())) : true));
   }, [state.messages, searchTerm]);
 
-  // View Components
   if (view === 'landing' && !session) return <LandingPage onStart={() => setView('login')} onLogin={() => setView('login')} onSignup={() => setView('signup')} onQuickInquiry={(val) => { setView('chat'); handleSendMessage(val); }} />;
   if ((view === 'login' || view === 'signup') && !session) return <AuthPages type={view} onSwitch={() => setView(view === 'login' ? 'signup' : 'login')} onSuccess={() => setView('chat')} onBack={() => setView('landing')} />;
 
