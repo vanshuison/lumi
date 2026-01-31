@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Message, ChatState, Memory, PersonaType, Attachment, ImageSize } from './types';
 import { generateIntelligentResponse, generateSpeech, extractMemories } from './services/geminiService';
@@ -286,7 +285,7 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen bg-[#fcfaf2] text-[#2d3436] overflow-hidden animate-in fade-in duration-700">
       {isSidebarOpen && <div className="fixed inset-0 bg-stone-900/10 backdrop-blur-[2px] z-40 lg:hidden transition-opacity" onClick={() => setIsSidebarOpen(false)} />}
-      <CommandPalette isOpen={showPalette} onClose={() => setShowPalette(false)} onSelectPersona={setActivePersona} onOpenMemory={() => setShowMemory(true)} onNewChat={() => { clearChat(); }} />
+      <CommandPalette isOpen={showPalette} onClose={() => setShowPalette(false)} onSelectPersona={(p) => setActivePersona(p as PersonaType)} onOpenMemory={() => setShowMemory(true)} onNewChat={() => { clearChat(); }} />
 
       <aside className={`fixed inset-y-0 left-0 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition-all duration-300 ease-out z-50 w-80 bg-[#e4d8cc] border-r border-stone-200/50 flex flex-col shadow-xl lg:shadow-none`}>
         <Sidebar 
